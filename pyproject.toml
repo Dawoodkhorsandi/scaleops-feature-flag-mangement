@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "scaleops-feature-flag-mangement"
+version = "0.1.0"
+description = "A robust backend service for managing feature flags with dependency support."
+authors = ["Dawood <dawoodkhorsandi@gmail.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = { extras = ["standard"], version = "^0.116.1" }
+sqlalchemy = "^2.0.41"
+psycopg2-binary = "^2.9.9"
+alembic = "^1.13.1"
+pytest = "^8.4.1"
+
+
+[tool.poetry.group.dev.dependencies]
+httpx = "^0.28.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
