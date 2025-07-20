@@ -15,8 +15,15 @@ from ..audit_logs.auditable import Auditable
 feature_dependency_association = Table(
     "feature_dependency_association",
     Base.metadata,
-    Column("dependent_feature_id", Integer, ForeignKey("feature_flags.id"), primary_key=True),
-    Column("parent_feature_id", Integer, ForeignKey("feature_flags.id"), primary_key=True),
+    Column(
+        "dependent_feature_id",
+        Integer,
+        ForeignKey("feature_flags.id"),
+        primary_key=True,
+    ),
+    Column(
+        "parent_feature_id", Integer, ForeignKey("feature_flags.id"), primary_key=True
+    ),
 )
 
 
