@@ -1,15 +1,17 @@
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.base_repository import BaseRepository
 from .model import AuditLog
-from .schema import AuditLogCreate, AuditLogHistoryQuery
+from .schemas import AuditLogCreate, AuditLogHistoryQuery
+from typing import Any, Generic, Type, TypeVar
+from src.infrastructure.database import Base
 
 
-class AuditLogRepository(
-    BaseRepository[AuditLog, AuditLogCreate, BaseModel]
-):
+ModelType = TypeVar("ModelType", bound=Base)
+
+
+class AuditLogRepository(BaseRepository[AuditLog, AuditLogCreate, BaseModel]):
     """
     Repository for AuditLog data access operations.
 
@@ -19,7 +21,6 @@ class AuditLogRepository(
 
     async def get_history(
         self,
-        db: AsyncSession,
         *,
         query: AuditLogHistoryQuery,
     ) -> list[AuditLog]:
@@ -29,7 +30,6 @@ class AuditLogRepository(
         This method encapsulates the database query logic, keeping the service
         layer clean and focused on business rules.
 
-        :param db: The async database session.
         :param query: A Pydantic object containing all filter and pagination options.
         :return: A list of audit log model instances.
         """
@@ -47,5 +47,5 @@ class AuditLogRepository(
         # Apply pagination from the query object
         statement = statement.offset(query.skip).limit(query.limit)
 
-        result = await db.execute(statement)
+        result = await self.db.execute(statement)
         return result.scalars().all()
