@@ -17,7 +17,7 @@ class AppContainer(containers.DeclarativeContainer):
     """
 
     settings: providers.Singleton[Settings] = providers.Singleton(Settings)
-    database: providers.Factory[Database] = providers.Singleton(
+    database: providers.Singleton[Database] = providers.Singleton(
         Database,
         db_url=settings.provided.postgres_dsn,
     )

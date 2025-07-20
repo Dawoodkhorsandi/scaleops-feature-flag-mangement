@@ -21,8 +21,6 @@ def _get_session(target: Any) -> Session | None:
     return object_session(target)
 
 
-
-
 def log_create(mapper: Mapper, connection: Connection, target: Any) -> None:
     """Generic listener for the 'after_insert' event."""
     session = _get_session(target)
@@ -81,18 +79,12 @@ def log_delete(mapper: Mapper, connection: Connection, target: Any) -> None:
     session.add(log_entry)
 
 
-# --- Automatic Registration ---
-
-
 def register_audit_listeners() -> None:
     """
     Finds all models that inherit from the 'Auditable' mixin and
     attaches the generic audit event listeners to them.
     This should be called once at application startup.
     """
-    print("Searching for auditable models to register listeners...")
-    # The mapper is of type Mapper, but we don't need to use the type hint here
-    # as it's part of the loop variable declaration.
     for mapper in Base.registry.mappers:
         cls = mapper.class_
         if issubclass(cls, Auditable):
