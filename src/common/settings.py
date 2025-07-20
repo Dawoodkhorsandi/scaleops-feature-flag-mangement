@@ -8,10 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     postgres_dsn: PostgresDsn
 
-    model_config = SettingsConfigDict(env_prefix='DEPENDENCY_APP_', case_sensitive=False,
-                                      env_file=path.join(path.dirname(path.abspath(__file__)), '..', '..', '.env'))
-
-
-@lru_cache()
-def get_settings():
-    return Settings()
+    model_config = SettingsConfigDict(
+        env_prefix="DEPENDENCY_APP_",
+        case_sensitive=False,
+        env_file=path.join(path.dirname(path.abspath(__file__)), "..", "..", ".env"),
+    )
