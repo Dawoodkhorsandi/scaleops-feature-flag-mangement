@@ -16,6 +16,7 @@ alembic = "^1.13.1"
 pytest = "^8.4.1"
 pydantic-settings = "^2.10.1"
 dependency-injector = "^4.48.1"
+asyncpg = "^0.30.0"
 
 
 [tool.poetry.group.dev.dependencies]
