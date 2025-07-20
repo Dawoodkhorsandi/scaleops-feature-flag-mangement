@@ -19,7 +19,7 @@ class AppContainer(containers.DeclarativeContainer):
     settings: providers.Singleton[Settings] = providers.Singleton(Settings)
     database: providers.Singleton[Database] = providers.Singleton(
         Database,
-        db_url=settings.provided.postgres_dsn,
+        db_url=str(settings.provided.postgres_dsn),
     )
 
     db_session: providers.Factory[AsyncSession] = providers.Factory(
