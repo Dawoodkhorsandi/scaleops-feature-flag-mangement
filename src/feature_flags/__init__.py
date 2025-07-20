@@ -1,6 +1,6 @@
 from .model import FeatureFlag
 from .repository import FeatureFlagRepository
-from .schema import (
+from .schemas import (
     FeatureFlagCreate,
     FeatureFlagNested,
     FeatureFlagUpdate,

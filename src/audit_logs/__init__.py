@@ -1,7 +1,7 @@
-from .enum import AuditAction
+from .enums import AuditAction
 from .model import AuditLog
 from .repository import AuditLogRepository
-from .schema import AuditLogCreate, AuditLogHistoryQuery
+from .schemas import AuditLogCreate, AuditLogHistoryQuery
 from .service import AuditLogService
 
 __all__ = [
