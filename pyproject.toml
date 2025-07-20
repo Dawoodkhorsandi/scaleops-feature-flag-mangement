@@ -15,10 +15,13 @@ psycopg2-binary = "^2.9.9"
 alembic = "^1.13.1"
 pytest = "^8.4.1"
 pydantic-settings = "^2.10.1"
+dependency-injector = "^4.48.1"
 
 
 [tool.poetry.group.dev.dependencies]
 httpx = "^0.28.0"
+black = "^25.1.0"
+pre-commit = "^4.2.0"
 
 [build-system]
 requires = ["poetry-core"]
