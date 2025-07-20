@@ -41,8 +41,7 @@ def create_app() -> FastAPI:
     )
     app.container = container
     db_instance: Database = container.database()
-    app.add_middleware(DBSessionMiddleware(db_instance))
-
+    app.add_middleware(DBSessionMiddleware, db_manager=db_instance)
     app.include_router(audit_logs_router)
     app.include_router(feature_flags_router)
 
