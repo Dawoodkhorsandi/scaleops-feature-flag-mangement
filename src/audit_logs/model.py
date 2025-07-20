@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from sqlalchemy import (
     Column,
@@ -10,8 +9,6 @@ from sqlalchemy import (
 )
 from .enums import AuditAction
 from src.infrastructure.database import Base
-
-
 
 
 class AuditLog(Base):

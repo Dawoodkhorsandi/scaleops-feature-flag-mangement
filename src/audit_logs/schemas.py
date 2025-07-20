@@ -22,6 +22,7 @@ class AuditLogCreate(AuditLogBase):
 class AuditLog(AuditLogBase):
     id: int
     timestamp: datetime.datetime
+
     class Config:
         from_attributes = True
 
