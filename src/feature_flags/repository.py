@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.infrastructure.base_repository import BaseRepository
 from .model import FeatureFlag
@@ -19,6 +19,22 @@ class FeatureFlagRepository(
         statement = select(self.model).where(self.model.id.in_(dependency_ids))
         result = await self.db.execute(statement)
         return result.scalars().all()
+
+    async def get(self, _id: int) -> Optional[FeatureFlag]:
+        """
+        Retrieves a single flag by its ID, eagerly loading its dependencies
+        and dependents to prevent lazy-loading issues in async contexts.
+        """
+        statement = (
+            select(self.model)
+            .where(self.model.id == _id)
+            .options(
+                selectinload(self.model.dependencies),
+                selectinload(self.model.dependents),
+            )
+        )
+        result = await self.db.execute(statement)
+        return result.scalar_one_or_none()
 
     async def get_by_name(self, *, name: str) -> Optional[FeatureFlag]:
         """Retrieves a feature flag by its unique name."""
