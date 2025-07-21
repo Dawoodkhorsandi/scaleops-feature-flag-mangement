@@ -5,6 +5,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapper, Session, attributes, object_session
 
 from src.infrastructure.database import Base
+from src.common.dependencies import actor_context
 from .auditable import Auditable
 from .enums import AuditAction
 from .model import AuditLog
@@ -30,6 +31,7 @@ def log_create(mapper: Mapper, connection: Connection, target: Any) -> None:
     log_details = {"created": _model_to_dict(target)}
     log_entry = AuditLog(
         action=AuditAction.CREATE,
+        actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
         details=log_details,
@@ -56,6 +58,7 @@ def log_update(mapper: Mapper, connection: Connection, target: Any) -> None:
 
     log_entry = AuditLog(
         action=AuditAction.UPDATE,
+        actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
         details={"changes": changes},
@@ -72,6 +75,7 @@ def log_delete(mapper: Mapper, connection: Connection, target: Any) -> None:
     log_details = {"deleted": _model_to_dict(target)}
     log_entry = AuditLog(
         action=AuditAction.DELETE,
+        actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
         details=log_details,
@@ -83,7 +87,6 @@ def register_audit_listeners() -> None:
     """
     Finds all models that inherit from the 'Auditable' mixin and
     attaches the generic audit event listeners to them.
-    This should be called once at application startup.
     """
     for mapper in Base.registry.mappers:
         cls = mapper.class_

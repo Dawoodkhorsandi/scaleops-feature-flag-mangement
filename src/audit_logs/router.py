@@ -4,6 +4,7 @@ from dependency_injector.wiring import inject, Provide
 from src.infrastructure.containers import AppContainer
 from . import schemas
 from .service import AuditLogService
+from src.common.dependencies import set_actor_from_header
 
 router = APIRouter(prefix="/history", tags=["Audit Logs"])
 
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/history", tags=["Audit Logs"])
 @inject
 async def get_audit_history(
     query: schemas.AuditLogHistoryQuery = Depends(),
+    _actor_context: None = Depends(set_actor_from_header),
     service: AuditLogService = Depends(Provide[AppContainer.audit_log_service]),
 ):
     """

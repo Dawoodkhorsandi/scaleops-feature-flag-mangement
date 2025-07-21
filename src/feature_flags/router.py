@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from dependency_injector.wiring import inject, Provide
 from pydantic import BaseModel
+from src.common.dependencies import set_actor_from_header
 
 from src.infrastructure.containers import AppContainer
 from . import schemas
@@ -19,6 +20,7 @@ class TogglePayload(BaseModel):
 @inject
 async def create_flag(
     payload: schemas.FeatureFlagCreate,
+    _actor_context: None = Depends(set_actor_from_header),
     service: FeatureFlagService = Depends(Provide[AppContainer.feature_flag_service]),
 ):
     """
@@ -35,6 +37,7 @@ async def create_flag(
 async def get_all_flags(
     skip: int = 0,
     limit: int = 100,
+    _actor_context: None = Depends(set_actor_from_header),
     service: FeatureFlagService = Depends(Provide[AppContainer.feature_flag_service]),
 ):
     """
@@ -47,6 +50,7 @@ async def get_all_flags(
 @inject
 async def get_flag(
     flag_id: int,
+    _actor_context: None = Depends(set_actor_from_header),
     service: FeatureFlagService = Depends(Provide[AppContainer.feature_flag_service]),
 ):
     """
@@ -60,6 +64,7 @@ async def get_flag(
 async def toggle_flag(
     flag_id: int,
     payload: TogglePayload,
+    _actor_context: None = Depends(set_actor_from_header),
     service: FeatureFlagService = Depends(Provide[AppContainer.feature_flag_service]),
 ):
     """
