@@ -42,4 +42,4 @@ class AuditLogService:
         :param query: A Pydantic object containing all filter and pagination options.
         :return: A list of audit log model instances.
         """
-        return await self.repository.get_history(query)
+        return await self.repository.get_history(query=query)

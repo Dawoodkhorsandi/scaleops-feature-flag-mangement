@@ -27,7 +27,7 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     db_session: providers.Factory[AsyncSession] = providers.Factory(
-        database.provided.get_session
+        database.provided.get_session()
     )
 
     audit_log_repo = providers.Factory(
