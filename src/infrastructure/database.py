@@ -25,7 +25,7 @@ class Database:
         """
         Initializes the async engine and the scoped session factory.
         """
-        self._engine = create_async_engine(db_url, future=True, echo=False)
+        self._engine = create_async_engine(db_url, echo=False)
         session_factory = sessionmaker(
             autocommit=False,
             autoflush=False,
