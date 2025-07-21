@@ -74,3 +74,21 @@ async def toggle_flag(
     - When disabling, triggers a cascading disable of all dependent flags.
     """
     return await service.toggle(flag_id=flag_id, is_enabled=payload.is_enabled)
+
+
+@router.patch("/{flag_id}", response_model=schemas.FeatureFlag)
+@inject
+async def update_flag(
+    flag_id: int,
+    payload: schemas.FeatureFlagUpdate,
+    _actor_context: None = Depends(set_actor_from_header),
+    service: FeatureFlagService = Depends(Provide[AppContainer.feature_flag_service]),
+):
+    """
+    Update a feature flag's properties, including its name, description,
+    and dependencies.
+
+    - Validates that new dependencies exist.
+    - Detects and rejects circular dependencies.
+    """
+    return await service.update(flag_id=flag_id, obj_in=payload)

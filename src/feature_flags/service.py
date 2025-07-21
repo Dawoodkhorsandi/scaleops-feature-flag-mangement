@@ -122,3 +122,27 @@ class FeatureFlagService:
     async def get_all(self, *, skip: int, limit: int) -> list[model.FeatureFlag]:
         """Retrieves a paginated list of all feature flags."""
         return await self.repository.get_all(skip=skip, limit=limit)
+
+    async def update(
+        self, *, flag_id: int, obj_in: schemas.FeatureFlagUpdate
+    ) -> model.FeatureFlag:
+        """
+        Updates a feature flag's properties, ensuring data integrity and
+        preventing the introduction of dependency cycles.
+        """
+        db_flag = await self.repository.get(_id=flag_id)
+        if not db_flag:
+            raise NotFoundException("Feature flag not found.")
+
+        if obj_in.name and obj_in.name != db_flag.name:
+            if await self.repository.get_by_name(name=obj_in.name):
+                raise ConflictException(
+                    f"Feature flag with name '{obj_in.name}' already exists."
+                )
+
+        if obj_in.dependency_ids is not None:
+            await self._validate_circular_dependency(
+                flag_id=flag_id, dependency_ids=obj_in.dependency_ids
+            )
+
+        return await self.repository.update(db_obj=db_flag, obj_in=obj_in)
