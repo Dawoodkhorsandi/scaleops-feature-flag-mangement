@@ -25,8 +25,9 @@ class AppContainer(containers.DeclarativeContainer):
         Database,
         db_url=db_url_provider,
     )
-    db_session: providers.Provider[AsyncSession] = (
-        database.provided.get_session.provider
+    db_session: providers.Factory[AsyncSession] = providers.Factory(
+        lambda db: db.get_session(),
+        db=database,
     )
 
     audit_log_repo = providers.Factory(

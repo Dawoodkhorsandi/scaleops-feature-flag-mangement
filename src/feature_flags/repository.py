@@ -81,3 +81,21 @@ class FeatureFlagRepository(
         await self.db.commit()
         await self.db.refresh(db_obj)
         return db_obj
+
+    async def get_all(self, *, skip: int = 0, limit: int = 100) -> list[FeatureFlag]:
+        """
+        Retrieves a paginated list of all flags, eagerly loading their
+        dependencies and dependents to prevent lazy-loading issues.
+        """
+        statement = (
+            select(self.model)
+            .order_by(self.model.id)
+            .offset(skip)
+            .limit(limit)
+            .options(
+                selectinload(self.model.dependencies),
+                selectinload(self.model.dependents),
+            )
+        )
+        result = await self.db.execute(statement)
+        return result.scalars().all()

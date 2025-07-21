@@ -44,12 +44,12 @@ def log_update(mapper: Mapper, connection: Connection, target: Any) -> None:
         return
 
     changes: dict[str, dict[str, Any]] = {}
-    for attr in attributes.instance_state(target).history.keys():
-        hist = attributes.get_history(target, attr)
+    for attr in inspect(target).mapper.column_attrs:
+        hist = attributes.get_history(target, attr.key)
         if hist.has_changes():
             old_value = hist.deleted[0] if hist.deleted else None
             new_value = hist.added[0] if hist.added else None
-            changes[attr] = {"before": old_value, "after": new_value}
+            changes[attr.key] = {"before": old_value, "after": new_value}
 
     if not changes:
         return
