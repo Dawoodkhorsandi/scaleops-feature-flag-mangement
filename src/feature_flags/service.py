@@ -8,6 +8,8 @@ from ..common.exceptions import (
     NotFoundException,
     BadRequestException,
 )
+from src.audit_logs.decorators import with_audit_action
+from .enums import FeatureFlagAuditActionEnum
 
 
 class FeatureFlagService:
@@ -56,6 +58,7 @@ class FeatureFlagService:
             if dep_id not in path:
                 await dfs(dep_id)
 
+    @with_audit_action(FeatureFlagAuditActionEnum.CREATE)
     async def create(self, *, obj_in: schemas.FeatureFlagCreate) -> model.FeatureFlag:
         """Creates a new feature flag after validating its name and dependencies."""
         if await self.repository.get_by_name(name=obj_in.name):
@@ -76,6 +79,7 @@ class FeatureFlagService:
 
         return await self.repository.create(obj_in=obj_in)
 
+    @with_audit_action(FeatureFlagAuditActionEnum.TOGGLE)
     async def toggle(self, *, flag_id: int, is_enabled: bool) -> model.FeatureFlag:
         """Toggles a flag's state, handling all dependency rules."""
         db_flag = await self.repository.get(_id=flag_id)
@@ -83,7 +87,6 @@ class FeatureFlagService:
             raise NotFoundException("Feature flag not found.")
 
         if is_enabled:
-            # When enabling, check if all dependencies are already active.
             missing_deps = [
                 dep.name for dep in db_flag.dependencies if not dep.is_enabled
             ]
@@ -91,15 +94,20 @@ class FeatureFlagService:
                 raise BadRequestException(
                     f"Cannot enable. Missing active dependencies: {', '.join(missing_deps)}"
                 )
+            updated_flag = await self.repository.update(
+                db_obj=db_flag, obj_in=schemas.FeatureFlagUpdate(is_enabled=is_enabled)
+            )
+
         else:
-            # When disabling, trigger a cascading disable for all dependents.
+            updated_flag = await self.repository.update(
+                db_obj=db_flag, obj_in=schemas.FeatureFlagUpdate(is_enabled=is_enabled)
+            )
+
             await self._cascade_disable(db_flag)
 
-        # The automatic audit system will log this update and all cascading updates.
-        return await self.repository.update(
-            db_obj=db_flag, obj_in=schemas.FeatureFlagUpdate(is_enabled=is_enabled)
-        )
+        return updated_flag
 
+    @with_audit_action(FeatureFlagAuditActionEnum.AUTO_DISABLE)
     async def _cascade_disable(self, parent_flag: model.FeatureFlag):
         """Iteratively disables all flags that depend on the parent flag."""
         flags_to_process = list(parent_flag.dependents)
@@ -123,6 +131,7 @@ class FeatureFlagService:
         """Retrieves a paginated list of all feature flags."""
         return await self.repository.get_all(skip=skip, limit=limit)
 
+    @with_audit_action(FeatureFlagAuditActionEnum.UPDATE)
     async def update(
         self, *, flag_id: int, obj_in: schemas.FeatureFlagUpdate
     ) -> model.FeatureFlag:

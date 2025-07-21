@@ -4,13 +4,10 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
-from .model import AuditAction
-
-
 class AuditLogBase(BaseModel):
-    action: AuditAction
+    action: str
     actor: Optional[str] = "system"
-    details: Optional[dict[str, Any]] = None
+    details: Optional[dict[str, Any]]
     target_entity: str
     target_id: str
 
@@ -28,8 +25,8 @@ class AuditLog(AuditLogBase):
 
 
 class AuditLogHistoryQuery(BaseModel):
-    target_entity: Optional[str] = None
-    target_id: Optional[str] = None
-    action: Optional[AuditAction] = None
+    target_entity: Optional[str]
+    target_id: Optional[str]
+    action: Optional[str]
     skip: int = 0
     limit: int = 100

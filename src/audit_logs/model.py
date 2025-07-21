@@ -2,12 +2,10 @@ from datetime import datetime
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum as SAEnum,
     Integer,
     String,
     JSON,
 )
-from .enums import AuditAction
 from src.infrastructure.database import Base
 
 
@@ -16,7 +14,7 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
-    action = Column(SAEnum(AuditAction), nullable=False)
+    action = Column(String, nullable=False)
     actor = Column(String, nullable=True, default="system")
     details = Column(JSON, nullable=True)
     target_entity = Column(String, index=True, nullable=False)

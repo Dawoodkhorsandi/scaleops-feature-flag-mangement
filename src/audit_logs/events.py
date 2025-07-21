@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any
 
 from sqlalchemy import event, inspect
@@ -9,6 +10,14 @@ from src.common.dependencies import actor_context
 from .auditable import Auditable
 from .enums import AuditAction
 from .model import AuditLog
+from .decorators import action_context
+
+
+def get_action_context_value(default: Enum):
+    ctx: Enum = action_context.get()
+    if ctx:
+        return ctx.value
+    return default.value
 
 
 def _model_to_dict(model_instance: Any) -> dict[str, Any]:
@@ -30,7 +39,7 @@ def log_create(mapper: Mapper, connection: Connection, target: Any) -> None:
 
     log_details = {"created": _model_to_dict(target)}
     log_entry = AuditLog(
-        action=AuditAction.CREATE,
+        action=get_action_context_value(AuditAction.CREATE),
         actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
@@ -57,7 +66,7 @@ def log_update(mapper: Mapper, connection: Connection, target: Any) -> None:
         return
 
     log_entry = AuditLog(
-        action=AuditAction.UPDATE,
+        action=get_action_context_value(AuditAction.UPDATE),
         actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
@@ -74,7 +83,7 @@ def log_delete(mapper: Mapper, connection: Connection, target: Any) -> None:
 
     log_details = {"deleted": _model_to_dict(target)}
     log_entry = AuditLog(
-        action=AuditAction.DELETE,
+        action=get_action_context_value(AuditAction.DELETE),
         actor=actor_context.get(),
         target_entity=target.__tablename__,
         target_id=str(target.id),
