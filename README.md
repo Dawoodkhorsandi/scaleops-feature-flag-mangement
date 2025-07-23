@@ -108,3 +108,25 @@ We use Black, the uncompromising code formatter, to ensure all Python code follo
     4.  If `black` reformats any of your files, it will abort the commit. This is expected behavior. Simply review the changes `black` made, add them to the staging area (`git add .`), and commit again. The second commit will succeed.
 
     This process ensures that no unformatted code ever makes it into the project's history.
+
+
+## 🧪 Running Tests
+
+This project uses `pytest` for its test suite.
+
+### 1. Install Test Dependencies
+
+Ensure you have the development dependencies installed, which includes `pytest`:
+
+```bash
+poetry install --with dev
+```
+
+### 2. Run Tests
+
+You can run all tests from the project root directory:
+
+```bash
+poetry run pytest
+```
+
