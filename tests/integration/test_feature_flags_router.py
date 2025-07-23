@@ -73,8 +73,8 @@ async def test_toggle_flag_on_fails_if_dependency_is_off(
         f"/flags/{child_flag.id}/toggle", json={"is_enabled": True}, headers=headers
     )
 
-    assert toggle_res.status_code == 400  # Bad Request
-    assert "Missing active dependencies" in toggle_res.json()["detail"]
+    assert toggle_res.status_code == 400
+    assert "Cannot enable due to inactive dependencies." in toggle_res.json()["detail"]
 
 
 async def test_toggle_flag_off_cascades_to_dependents(
@@ -131,7 +131,7 @@ async def test_create_flag_with_nonexistent_dependency(
         json={"name": "Lonely Flag", "dependency_ids": [9999]},
         headers=headers,
     )
-    assert response.status_code == 404  # Not Found
+    assert response.status_code == 404
     assert "One or more dependency IDs not found" in response.json()["detail"]
 
 
@@ -149,7 +149,7 @@ async def test_update_flag_circular_dependency(
         headers=headers,
     )
 
-    assert response.status_code == 400  # Bad Request
+    assert response.status_code == 400
     assert "Circular dependency detected" in response.json()["detail"]
 
 
@@ -191,6 +191,5 @@ async def test_update_flag_to_conflicting_name(
         json={"name": "Existing Name"},
         headers=headers,
     )
-
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]

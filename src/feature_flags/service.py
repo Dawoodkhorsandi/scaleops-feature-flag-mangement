@@ -1,23 +1,20 @@
 from typing import Set
-from sqlalchemy import select
 
 from .repository import FeatureFlagRepository
 from . import schemas, model
-from ..common.exceptions import (
-    ConflictException,
-    NotFoundException,
-    BadRequestException,
+
+from .exceptions import (
+    SelfDependencyException,
+    FeatureFlagNotFoundException,
+    FeatureFlagConflictException,
+    CircularDependencyException,
+    MissingDependenciesException,
 )
 from src.audit_logs.decorators import with_audit_action
 from .enums import FeatureFlagAuditActionEnum
 
 
 class FeatureFlagService:
-    """
-    Handles the business logic for feature flags, including dependency validation
-    and cascading state changes.
-    """
-
     def __init__(self, repository: FeatureFlagRepository):
         self.repository = repository
 
@@ -31,7 +28,7 @@ class FeatureFlagService:
             return
 
         if flag_id and flag_id in dependency_ids:
-            raise BadRequestException("A feature flag cannot depend on itself.")
+            raise SelfDependencyException()
 
         path: Set[int] = set([flag_id]) if flag_id else set()
         visiting: Set[int] = set([flag_id]) if flag_id else set()
@@ -46,9 +43,7 @@ class FeatureFlagService:
 
             for dep in node.dependencies:
                 if dep.id in visiting:
-                    raise BadRequestException(
-                        f"Circular dependency detected with flag '{dep.name}'."
-                    )
+                    raise CircularDependencyException(flag_name=dep.name)
                 if dep.id not in path:
                     await dfs(dep.id)
 
@@ -62,7 +57,7 @@ class FeatureFlagService:
     async def create(self, *, obj_in: schemas.FeatureFlagCreate) -> model.FeatureFlag:
         """Creates a new feature flag after validating its name and dependencies."""
         if await self.repository.get_by_name(name=obj_in.name):
-            raise ConflictException(
+            raise FeatureFlagConflictException(
                 f"Feature flag with name '{obj_in.name}' already exists."
             )
 
@@ -71,8 +66,9 @@ class FeatureFlagService:
                 dependency_ids=obj_in.dependency_ids
             )
             if len(deps) != len(set(obj_in.dependency_ids)):
-                raise NotFoundException("One or more dependency IDs not found.")
-
+                raise FeatureFlagNotFoundException(
+                    "One or more dependency IDs not found."
+                )
         await self._validate_circular_dependency(
             flag_id=None, dependency_ids=obj_in.dependency_ids
         )
@@ -84,16 +80,13 @@ class FeatureFlagService:
         """Toggles a flag's state, handling all dependency rules."""
         db_flag = await self.repository.get(_id=flag_id)
         if not db_flag:
-            raise NotFoundException("Feature flag not found.")
-
+            raise FeatureFlagNotFoundException()
         if is_enabled:
             missing_deps = [
                 dep.name for dep in db_flag.dependencies if not dep.is_enabled
             ]
             if missing_deps:
-                raise BadRequestException(
-                    f"Cannot enable. Missing active dependencies: {', '.join(missing_deps)}"
-                )
+                raise MissingDependenciesException(missing_dependencies=missing_deps)
             updated_flag = await self.repository.update(
                 db_obj=db_flag, obj_in=schemas.FeatureFlagUpdate(is_enabled=is_enabled)
             )
@@ -124,7 +117,7 @@ class FeatureFlagService:
         """Retrieves a single flag by its ID."""
         flag = await self.repository.get(_id)
         if not flag:
-            raise NotFoundException("Feature flag not found.")
+            raise FeatureFlagNotFoundException()
         return flag
 
     async def get_all(self, *, skip: int, limit: int) -> list[model.FeatureFlag]:
@@ -135,17 +128,13 @@ class FeatureFlagService:
     async def update(
         self, *, flag_id: int, obj_in: schemas.FeatureFlagUpdate
     ) -> model.FeatureFlag:
-        """
-        Updates a feature flag's properties, ensuring data integrity and
-        preventing the introduction of dependency cycles.
-        """
         db_flag = await self.repository.get(_id=flag_id)
         if not db_flag:
-            raise NotFoundException("Feature flag not found.")
+            raise FeatureFlagNotFoundException()
 
         if obj_in.name and obj_in.name != db_flag.name:
             if await self.repository.get_by_name(name=obj_in.name):
-                raise ConflictException(
+                raise FeatureFlagConflictException(
                     f"Feature flag with name '{obj_in.name}' already exists."
                 )
 
