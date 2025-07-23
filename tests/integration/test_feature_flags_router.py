@@ -1,10 +1,16 @@
 import pytest
 from httpx import AsyncClient
 
+from src.common.context import actor_context
+from src.feature_flags.repository import FeatureFlagRepository
+from src.feature_flags.schemas import FeatureFlagCreate, FeatureFlagUpdate
+
 
 @pytest.fixture
 async def headers() -> dict:
-    return {"X-Actor": "test-user"}
+    actor_id = "test-user"
+    actor_context.set(actor_id)
+    return {"X-Actor": actor_id}
 
 
 async def test_create_flag_success(client: AsyncClient, headers: dict):
@@ -20,99 +26,98 @@ async def test_create_flag_success(client: AsyncClient, headers: dict):
     assert "id" in data
 
 
-async def test_create_flag_with_dependency(client: AsyncClient, headers: dict):
-    parent_res = await client.post(
-        "/flags/", json={"name": "Parent Flag"}, headers=headers
+async def test_create_flag_with_dependency(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+    parent_flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Parent Flag")
     )
-    assert parent_res.status_code == 201
-    parent_id = parent_res.json()["id"]
 
     child_res = await client.post(
         "/flags/",
-        json={"name": "Child Flag", "dependency_ids": [parent_id]},
+        json={"name": "Child Flag", "dependency_ids": [parent_flag.id]},
         headers=headers,
     )
+
     assert child_res.status_code == 201
     child_data = child_res.json()
     assert child_data["name"] == "Child Flag"
     assert len(child_data["dependencies"]) == 1
-    assert child_data["dependencies"][0]["id"] == parent_id
+    assert child_data["dependencies"][0]["id"] == parent_flag.id
 
 
-async def test_create_flag_name_conflict(client: AsyncClient, headers: dict):
-    """Test that creating a flag with a duplicate name fails."""
-    await client.post("/flags/", json={"name": "Duplicate Name"}, headers=headers)
+async def test_create_flag_name_conflict(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+    await feature_flag_repo.create(obj_in=FeatureFlagCreate(name="Duplicate Name"))
+
     response = await client.post(
         "/flags/", json={"name": "Duplicate Name"}, headers=headers
     )
-    assert response.status_code == 409  # Conflict
+
+    assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
 
 
 async def test_toggle_flag_on_fails_if_dependency_is_off(
-    client: AsyncClient, headers: dict
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
 ):
-    """Test that a flag cannot be enabled if its dependency is disabled."""
-    parent_res = await client.post(
-        "/flags/", json={"name": "Parent Off"}, headers=headers
+    parent_flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Parent Off")
     )
-    parent_id = parent_res.json()["id"]
-
-    child_res = await client.post(
-        "/flags/",
-        json={"name": "Child Off", "dependency_ids": [parent_id]},
-        headers=headers,
+    child_flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Child Off", dependency_ids=[parent_flag.id])
     )
-    child_id = child_res.json()["id"]
 
-    # Try to enable the child flag
     toggle_res = await client.patch(
-        f"/flags/{child_id}/toggle", json={"is_enabled": True}, headers=headers
+        f"/flags/{child_flag.id}/toggle", json={"is_enabled": True}, headers=headers
     )
+
     assert toggle_res.status_code == 400  # Bad Request
     assert "Missing active dependencies" in toggle_res.json()["detail"]
 
 
 async def test_toggle_flag_off_cascades_to_dependents(
-    client: AsyncClient, headers: dict
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
 ):
-    """Test that disabling a parent flag also disables its dependent flags."""
-    parent_res = await client.post(
-        "/flags/", json={"name": "Cascading Parent"}, headers=headers
+    parent_flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Cascading Parent")
     )
-    parent_id = parent_res.json()["id"]
-    await client.patch(
-        f"/flags/{parent_id}/toggle", json={"is_enabled": True}, headers=headers
+    parent_flag = await feature_flag_repo.update(
+        db_obj=parent_flag, obj_in=FeatureFlagUpdate(is_enabled=True)
     )
 
-    child_res = await client.post(
-        "/flags/",
-        json={"name": "Cascading Child", "dependency_ids": [parent_id]},
-        headers=headers,
+    child_flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(
+            name="Cascading Child", dependency_ids=[parent_flag.id]
+        )
     )
-    child_id = child_res.json()["id"]
-    await client.patch(
-        f"/flags/{child_id}/toggle", json={"is_enabled": True}, headers=headers
+    await feature_flag_repo.update(
+        db_obj=child_flag, obj_in=FeatureFlagUpdate(is_enabled=True)
     )
 
     disable_res = await client.patch(
-        f"/flags/{parent_id}/toggle", json={"is_enabled": False}, headers=headers
+        f"/flags/{parent_flag.id}/toggle", json={"is_enabled": False}, headers=headers
     )
+
     assert disable_res.status_code == 200
     assert disable_res.json()["is_enabled"] is False
 
-    child_check_res = await client.get(f"/flags/{child_id}", headers=headers)
-    assert child_check_res.status_code == 200
-    assert child_check_res.json()["is_enabled"] is False
+    updated_child = await feature_flag_repo.get(child_flag.id)
+    assert updated_child is not None
+    assert updated_child.is_enabled is False
 
 
-async def test_get_all_flags(client: AsyncClient, headers: dict):
-    """Test retrieving all flags."""
-    await client.post("/flags/", json={"name": "Flag A"}, headers=headers)
-    await client.post("/flags/", json={"name": "Flag B"}, headers=headers)
+async def test_get_all_flags(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+    await feature_flag_repo.create(obj_in=FeatureFlagCreate(name="Flag A"))
+    await feature_flag_repo.create(obj_in=FeatureFlagCreate(name="Flag B"))
 
     response = await client.get("/flags/", headers=headers)
+
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == 2
+    assert {d["name"] for d in data} == {"Flag A", "Flag B"}
