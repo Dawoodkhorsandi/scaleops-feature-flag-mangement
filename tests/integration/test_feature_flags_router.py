@@ -121,3 +121,76 @@ async def test_get_all_flags(
     assert isinstance(data, list)
     assert len(data) == 2
     assert {d["name"] for d in data} == {"Flag A", "Flag B"}
+
+
+async def test_create_flag_with_nonexistent_dependency(
+    client: AsyncClient, headers: dict
+):
+    response = await client.post(
+        "/flags/",
+        json={"name": "Lonely Flag", "dependency_ids": [9999]},
+        headers=headers,
+    )
+    assert response.status_code == 404  # Not Found
+    assert "One or more dependency IDs not found" in response.json()["detail"]
+
+
+async def test_update_flag_circular_dependency(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+    flag_a = await feature_flag_repo.create(obj_in=FeatureFlagCreate(name="Flag A"))
+    await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Flag B", dependency_ids=[flag_a.id])
+    )
+
+    response = await client.patch(
+        f"/flags/{flag_a.id}",
+        json={"dependency_ids": [2]},
+        headers=headers,
+    )
+
+    assert response.status_code == 400  # Bad Request
+    assert "Circular dependency detected" in response.json()["detail"]
+
+
+async def test_get_single_flag_not_found(client: AsyncClient, headers: dict):
+    response = await client.get("/flags/9999", headers=headers)
+    assert response.status_code == 404
+
+
+async def test_update_flag_properties_success(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+    flag = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Original Name")
+    )
+
+    response = await client.patch(
+        f"/flags/{flag.id}",
+        json={"name": "Updated Name", "description": "New description"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Updated Name"
+    assert data["description"] == "New description"
+
+
+async def test_update_flag_to_conflicting_name(
+    client: AsyncClient, headers: dict, feature_flag_repo: FeatureFlagRepository
+):
+
+    await feature_flag_repo.create(obj_in=FeatureFlagCreate(name="Existing Name"))
+    flag_to_update = await feature_flag_repo.create(
+        obj_in=FeatureFlagCreate(name="Original Name")
+    )
+
+    response = await client.patch(
+        f"/flags/{flag_to_update.id}",
+        json={"name": "Existing Name"},
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert "already exists" in response.json()["detail"]
