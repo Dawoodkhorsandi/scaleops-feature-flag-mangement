@@ -11,12 +11,6 @@ class AuditLogService:
     """
 
     def __init__(self, repository: AuditLogRepository):
-        """
-        Initializes the service with a repository dependency.
-        This is ideal for dependency injection.
-
-        :param repository: An instance of AuditLogRepository.
-        """
         self.repository = repository
 
     async def create_log(

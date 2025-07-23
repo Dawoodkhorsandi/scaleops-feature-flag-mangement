@@ -21,10 +21,6 @@ class FeatureFlagRepository(
         return result.scalars().all()
 
     async def get(self, _id: int) -> Optional[FeatureFlag]:
-        """
-        Retrieves a single flag by its ID, eagerly loading its dependencies
-        and dependents to prevent lazy-loading issues in async contexts.
-        """
         statement = (
             select(self.model)
             .where(self.model.id == _id)
@@ -83,10 +79,6 @@ class FeatureFlagRepository(
         return db_obj
 
     async def get_all(self, *, skip: int = 0, limit: int = 100) -> list[FeatureFlag]:
-        """
-        Retrieves a paginated list of all flags, eagerly loading their
-        dependencies and dependents to prevent lazy-loading issues.
-        """
         statement = (
             select(self.model)
             .order_by(self.model.id)

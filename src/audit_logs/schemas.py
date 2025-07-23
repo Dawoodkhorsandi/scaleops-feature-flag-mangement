@@ -25,8 +25,8 @@ class AuditLog(AuditLogBase):
 
 
 class AuditLogHistoryQuery(BaseModel):
-    target_entity: Optional[str]
-    target_id: Optional[str]
-    action: Optional[str]
+    target_entity: Optional[str] = None
+    target_id: Optional[str] = None
+    action: Optional[str] = None
     skip: int = 0
     limit: int = 100

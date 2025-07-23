@@ -6,15 +6,15 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapper, Session, attributes, object_session
 
 from src.infrastructure.database import Base
-from src.common.dependencies import actor_context
+from src.common.context import actor_context
 from .auditable import Auditable
 from .enums import AuditAction
 from .model import AuditLog
 from .decorators import action_context
 
 
-def get_action_context_value(default: Enum):
-    ctx: Enum = action_context.get()
+def get_action_context_value(default: Enum) -> str:
+    ctx: Enum | None = action_context.get(None)
     if ctx:
         return ctx.value
     return default.value

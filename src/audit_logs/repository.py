@@ -12,23 +12,13 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 
 class AuditLogRepository(BaseRepository[AuditLog, AuditLogCreate, BaseModel]):
-    """
-    Repository for AuditLog data access operations.
-
-    Inherits basic CRUD functionality from BaseRepository and adds
-    specific querying methods for retrieving audit history.
-    """
-
     async def get_history(
         self,
         *,
         query: AuditLogHistoryQuery,
     ) -> list[AuditLog]:
         """
-        Fetches a paginated history of audit logs based on query parameters.
-
-        This method encapsulates the database query logic, keeping the service
-        layer clean and focused on business rules.
+        Fetches a paginated history of audit logs.
 
         :param query: A Pydantic object containing all filter and pagination options.
         :return: A list of audit log model instances.
